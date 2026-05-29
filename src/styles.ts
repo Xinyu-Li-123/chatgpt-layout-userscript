@@ -11,8 +11,8 @@ export function injectStyles(): void {
       box-sizing: border-box !important;
       margin-left: 0 !important;
       margin-right: 0 !important;
-      padding-left: var(--cg-convo-padding-left, 0px) !important;
-      padding-right: var(--cg-convo-padding-right, 0px) !important;
+      padding-left: var(--cg-convo-padding-left, 0vw) !important;
+      padding-right: var(--cg-convo-padding-right, 0vw) !important;
     }
 
     [class*="--thread-content-max-width"] {

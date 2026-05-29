@@ -10,7 +10,7 @@ export const STORAGE_KEYS = {
 export const DEFAULTS = {
   left: 0,
   right: 0,
-  maxSliderValue: 1200,
+  maxSliderValue: 50,
 } as const;
 
 export const CSS_VARS = {

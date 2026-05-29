@@ -12,6 +12,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+function formatVw(value: number): string {
+  return `${Number(value.toFixed(2))}vw`;
+}
+
 function createSliderRow(options: {
   labelText: string;
   value: number;
@@ -29,7 +33,7 @@ function createSliderRow(options: {
   labelName.textContent = labelText;
 
   const valueText = document.createElement('span');
-  valueText.textContent = `${value}px`;
+  valueText.textContent = formatVw(value);
 
   label.append(labelName, valueText);
 
@@ -37,14 +41,14 @@ function createSliderRow(options: {
   range.type = 'range';
   range.min = '0';
   range.max = String(max);
-  range.step = '1';
+  range.step = '0.25';
   range.value = String(value);
 
   function setValue(nextValue: number): void {
-    const normalized = clamp(Math.round(nextValue), 0, max);
+    const normalized = clamp(nextValue, 0, max);
 
     range.value = String(normalized);
-    valueText.textContent = `${normalized}px`;
+    valueText.textContent = formatVw(normalized);
     onChange(normalized);
   }
 
