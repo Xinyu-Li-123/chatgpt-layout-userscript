@@ -21,8 +21,8 @@ export function injectStyles(): void {
 
     #cg-layout-slider-panel {
       position: fixed;
-      right: 16px;
-      bottom: 16px;
+      left: 0;
+      top: 0;
       z-index: 2147483647;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #111;
@@ -45,6 +45,8 @@ export function injectStyles(): void {
       cursor: pointer;
       box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
       backdrop-filter: blur(8px);
+      touch-action: none;
+      user-select: none;
     }
 
     #cg-layout-slider-panel .cg-icon-button:hover {
@@ -53,9 +55,7 @@ export function injectStyles(): void {
 
     #cg-layout-slider-panel .cg-popover {
       position: absolute;
-      right: 0;
-      bottom: 48px;
-      width: 240px;
+      width: min(240px, calc(100vw - 16px));
       padding: 10px;
       border: 1px solid rgba(0, 0, 0, 0.16);
       border-radius: 12px;
@@ -63,6 +63,14 @@ export function injectStyles(): void {
       color: #111;
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
       backdrop-filter: blur(8px);
+    }
+
+    #cg-layout-slider-panel .cg-popover-above {
+      bottom: 48px;
+    }
+
+    #cg-layout-slider-panel .cg-popover-below {
+      top: 48px;
     }
 
     #cg-layout-slider-panel .cg-popover[hidden] {

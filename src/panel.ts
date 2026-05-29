@@ -3,13 +3,122 @@ import { slidersIconSvg } from './icons';
 import { applyPadding } from './layout';
 import { readNumber, saveNumber } from './storage';
 
+type PanelPosition = {
+  x: number;
+  y: number;
+};
+
 type SliderRow = {
   element: HTMLElement;
   setValue: (value: number) => void;
 };
 
+const PANEL_EDGE_OFFSET = 16;
+const PANEL_VIEWPORT_MARGIN = 8;
+const DRAG_THRESHOLD = 4;
+const POPOVER_GAP = 10;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function readPanelPosition(): PanelPosition | null {
+  const raw = localStorage.getItem(STORAGE_KEYS.panelPosition);
+  if (raw === null) return null;
+
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      'x' in value &&
+      'y' in value
+    ) {
+      const { x, y } = value as { x: unknown; y: unknown };
+
+      if (typeof x === 'number' && typeof y === 'number') {
+        return {
+          x: clamp(x, 0, 1),
+          y: clamp(y, 0, 1),
+        };
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function savePanelPosition(position: PanelPosition): void {
+  localStorage.setItem(STORAGE_KEYS.panelPosition, JSON.stringify(position));
+}
+
+function getPanelBounds(root: HTMLElement): {
+  minLeft: number;
+  maxLeft: number;
+  minTop: number;
+  maxTop: number;
+} {
+  const minLeft = PANEL_VIEWPORT_MARGIN;
+  const minTop = PANEL_VIEWPORT_MARGIN;
+  const maxLeft = Math.max(
+    minLeft,
+    window.innerWidth - root.offsetWidth - PANEL_VIEWPORT_MARGIN,
+  );
+  const maxTop = Math.max(
+    minTop,
+    window.innerHeight - root.offsetHeight - PANEL_VIEWPORT_MARGIN,
+  );
+
+  return { minLeft, maxLeft, minTop, maxTop };
+}
+
+function panelPositionToPixels(
+  root: HTMLElement,
+  position: PanelPosition,
+): { left: number; top: number } {
+  const bounds = getPanelBounds(root);
+
+  return {
+    left: bounds.minLeft + position.x * (bounds.maxLeft - bounds.minLeft),
+    top: bounds.minTop + position.y * (bounds.maxTop - bounds.minTop),
+  };
+}
+
+function panelPixelsToPosition(
+  root: HTMLElement,
+  left: number,
+  top: number,
+): PanelPosition {
+  const bounds = getPanelBounds(root);
+  const width = bounds.maxLeft - bounds.minLeft;
+  const height = bounds.maxTop - bounds.minTop;
+
+  return {
+    x: width === 0 ? 0 : clamp((left - bounds.minLeft) / width, 0, 1),
+    y: height === 0 ? 0 : clamp((top - bounds.minTop) / height, 0, 1),
+  };
+}
+
+function getDefaultPanelPosition(root: HTMLElement): PanelPosition {
+  return panelPixelsToPosition(
+    root,
+    window.innerWidth - root.offsetWidth - PANEL_EDGE_OFFSET,
+    window.innerHeight - root.offsetHeight - PANEL_EDGE_OFFSET,
+  );
+}
+
+function setPanelPixels(root: HTMLElement, left: number, top: number): void {
+  const bounds = getPanelBounds(root);
+
+  root.style.left = `${clamp(left, bounds.minLeft, bounds.maxLeft)}px`;
+  root.style.top = `${clamp(top, bounds.minTop, bounds.maxTop)}px`;
+}
+
+function applyPanelPosition(root: HTMLElement, position: PanelPosition): void {
+  const { left, top } = panelPositionToPixels(root, position);
+  setPanelPixels(root, left, top);
 }
 
 function formatBrowserWindowWidth(value: number): string {
@@ -144,12 +253,123 @@ export function injectPanel(): void {
     applyPadding(left, right);
   });
 
+  function updatePopoverPosition(): void {
+    const panelRect = root.getBoundingClientRect();
+    const popoverWidth = popover.offsetWidth;
+    const popoverHeight = popover.offsetHeight;
+    const hasSpaceAbove = panelRect.top >= popoverHeight + POPOVER_GAP;
+    const hasSpaceBelow =
+      window.innerHeight - panelRect.bottom >= popoverHeight + POPOVER_GAP;
+    const opensAbove = hasSpaceAbove || !hasSpaceBelow;
+    const preferredLeft =
+      panelRect.left > window.innerWidth / 2
+        ? panelRect.right - popoverWidth
+        : panelRect.left;
+    const clampedLeft = clamp(
+      preferredLeft,
+      PANEL_VIEWPORT_MARGIN,
+      Math.max(
+        PANEL_VIEWPORT_MARGIN,
+        window.innerWidth - popoverWidth - PANEL_VIEWPORT_MARGIN,
+      ),
+    );
+
+    popover.classList.toggle('cg-popover-above', opensAbove);
+    popover.classList.toggle('cg-popover-below', !opensAbove);
+    popover.style.left = `${clampedLeft - panelRect.left}px`;
+  }
+
   function setPanelOpen(open: boolean): void {
     panelOpen = open;
     popover.hidden = !panelOpen;
+    if (panelOpen) updatePopoverPosition();
   }
 
+  let dragState:
+    | {
+        pointerId: number;
+        startPointerX: number;
+        startPointerY: number;
+        startLeft: number;
+        startTop: number;
+        moved: boolean;
+      }
+    | null = null;
+  let suppressClick = false;
+
+  iconButton.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+
+    const rect = root.getBoundingClientRect();
+
+    dragState = {
+      pointerId: event.pointerId,
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startLeft: rect.left,
+      startTop: rect.top,
+      moved: false,
+    };
+
+    iconButton.setPointerCapture(event.pointerId);
+  });
+
+  iconButton.addEventListener('pointermove', (event) => {
+    if (dragState === null || event.pointerId !== dragState.pointerId) return;
+
+    const deltaX = event.clientX - dragState.startPointerX;
+    const deltaY = event.clientY - dragState.startPointerY;
+
+    if (
+      !dragState.moved &&
+      Math.hypot(deltaX, deltaY) >= DRAG_THRESHOLD
+    ) {
+      dragState.moved = true;
+    }
+
+    if (!dragState.moved) return;
+
+    setPanelPixels(
+      root,
+      dragState.startLeft + deltaX,
+      dragState.startTop + deltaY,
+    );
+    if (panelOpen) updatePopoverPosition();
+  });
+
+  iconButton.addEventListener('pointerup', (event) => {
+    if (dragState === null || event.pointerId !== dragState.pointerId) return;
+
+    if (dragState.moved) {
+      const rect = root.getBoundingClientRect();
+      savePanelPosition(panelPixelsToPosition(root, rect.left, rect.top));
+      suppressClick = true;
+      event.preventDefault();
+    }
+
+    if (iconButton.hasPointerCapture(event.pointerId)) {
+      iconButton.releasePointerCapture(event.pointerId);
+    }
+
+    dragState = null;
+  });
+
+  iconButton.addEventListener('pointercancel', (event) => {
+    if (dragState === null || event.pointerId !== dragState.pointerId) return;
+
+    if (iconButton.hasPointerCapture(event.pointerId)) {
+      iconButton.releasePointerCapture(event.pointerId);
+    }
+
+    dragState = null;
+  });
+
   iconButton.addEventListener('click', () => {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
+
     setPanelOpen(!panelOpen);
   });
 
@@ -160,6 +380,19 @@ export function injectPanel(): void {
   actions.append(resetButton);
   popover.append(header, leftRow.element, rightRow.element, actions);
   root.append(iconButton, popover);
+  root.style.visibility = 'hidden';
 
   document.body.appendChild(root);
+
+  applyPanelPosition(root, readPanelPosition() ?? getDefaultPanelPosition(root));
+  root.style.visibility = '';
+
+  window.addEventListener('resize', () => {
+    const rect = root.getBoundingClientRect();
+    const position =
+      readPanelPosition() ?? panelPixelsToPosition(root, rect.left, rect.top);
+
+    applyPanelPosition(root, position);
+    if (panelOpen) updatePopoverPosition();
+  });
 }
