@@ -6,7 +6,7 @@ export default defineConfig({
     monkey({
       entry: 'src/main.ts',
       userscript: {
-        name: 'ChatGPT Conversation Width + Position Sliders',
+        name: 'ChatGPT Conversation Width Sliders',
         namespace: 'https://chatgpt.com/',
         version: '0.1.0',
         description:
