@@ -12,8 +12,8 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function formatVw(value: number): string {
-  return `${Number(value.toFixed(2))}vw`;
+function formatBrowserWindowWidth(value: number): string {
+  return `${Number(value.toFixed(2))}% of page width`;
 }
 
 function createSliderRow(options: {
@@ -33,7 +33,7 @@ function createSliderRow(options: {
   labelName.textContent = labelText;
 
   const valueText = document.createElement('span');
-  valueText.textContent = formatVw(value);
+  valueText.textContent = formatBrowserWindowWidth(value);
 
   label.append(labelName, valueText);
 
@@ -48,7 +48,7 @@ function createSliderRow(options: {
     const normalized = clamp(nextValue, 0, max);
 
     range.value = String(normalized);
-    valueText.textContent = formatVw(normalized);
+    valueText.textContent = formatBrowserWindowWidth(normalized);
     onChange(normalized);
   }
 
@@ -103,7 +103,7 @@ export function injectPanel(): void {
   header.append(title, closeButton);
 
   const leftRow = createSliderRow({
-    labelText: 'Left padding',
+    labelText: 'Left space',
     value: left,
     max: DEFAULTS.maxSliderValue,
     onChange: (value) => {
@@ -114,7 +114,7 @@ export function injectPanel(): void {
   });
 
   const rightRow = createSliderRow({
-    labelText: 'Right padding',
+    labelText: 'Right space',
     value: right,
     max: DEFAULTS.maxSliderValue,
     onChange: (value) => {
