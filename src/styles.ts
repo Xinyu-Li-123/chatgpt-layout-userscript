@@ -39,7 +39,7 @@ export function injectStyles(): void {
       align-items: center;
       justify-content: center;
       border: 1px solid rgba(0, 0, 0, 0.16);
-      border-radius: 999px;
+      border-radius: 5px;
       background: rgba(255, 255, 255, 0.94);
       color: #111;
       cursor: pointer;
