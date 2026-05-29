@@ -4,7 +4,6 @@ export const PANEL_ID = 'cg-layout-slider-panel';
 export const STORAGE_KEYS = {
   left: 'cg-layout-left-padding',
   right: 'cg-layout-right-padding',
-  panelOpen: 'cg-layout-panel-open',
 } as const;
 
 export const DEFAULTS = {

@@ -1,7 +1,7 @@
 import { DEFAULTS, PANEL_ID, STORAGE_KEYS } from './constants';
 import { slidersIconSvg } from './icons';
 import { applyPadding } from './layout';
-import { readBoolean, readNumber, saveBoolean, saveNumber } from './storage';
+import { readNumber, saveNumber } from './storage';
 
 type SliderRow = {
   element: HTMLElement;
@@ -69,7 +69,7 @@ export function injectPanel(): void {
 
   let left = readNumber(STORAGE_KEYS.left, DEFAULTS.left);
   let right = readNumber(STORAGE_KEYS.right, DEFAULTS.right);
-  let panelOpen = readBoolean(STORAGE_KEYS.panelOpen, false);
+  let panelOpen = false;
 
   applyPadding(left, right);
 
@@ -147,7 +147,6 @@ export function injectPanel(): void {
   function setPanelOpen(open: boolean): void {
     panelOpen = open;
     popover.hidden = !panelOpen;
-    saveBoolean(STORAGE_KEYS.panelOpen, panelOpen);
   }
 
   iconButton.addEventListener('click', () => {
